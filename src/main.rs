@@ -5,36 +5,36 @@ struct Operation<'a> {
 
 fn lire_reglage(ligne_config: &str) -> Result<(String, u32), String> {
 
-    let reglage = match ligne_config.split_once("=") {
+    let reglage = match ligne_config.split_once('=') {
         Some((gauche, droite)) => Operation {
             cle: gauche.trim(),
             valeur: droite.trim() },
-        None => return Err(format!("erreur : ligne malformee : {}", ligne_config)),
+        None => return Err(format!("ligne mal formée : {}", ligne_config)),
     };
 
     if reglage.cle.is_empty() {
-        return Err("erreur : cle vide".to_string());
+        return Err("cle vide".to_string());
     }
 
-    if reglage.valeur.chars().all(|value| !value.is_ascii_digit()) {
-        return Err(format!("erreur : valeur invalide pour {} : {}",reglage.cle, reglage.valeur ));
-    }
+    let valeur_num = match reglage.valeur.parse::<u32>() {
+        Ok(v) => v,
+        Err(_) => return Err(format!("valeur invalide pour {} : {}", reglage.cle, reglage.valeur)),
+    };
 
-    Ok((reglage.cle.to_string(), reglage.valeur.parse::<u32>().unwrap_or(0)))
+    Ok((reglage.cle.to_string(), valeur_num))
     
 }
 
 fn main() {
 
-    match lire_reglage("port=8080") {
-        Ok((cle, valeur)) => println!("{} = {}", cle, valeur),
-        Err(_) => {}
-    };
+    let lignes = ["sevy=8080vesd", "port=8080", "timeout = 30", "max_conn", "=42", "retries=beaucoup"];
 
-    match lire_reglage("time = 30") {
-        Ok((cle, valeur)) => println!("{} = {}", cle, valeur),
-        Err(_) => {}
-    };
+    for ligne in lignes {
+        match lire_reglage(ligne) {
+            Ok((cle, valeur)) => println!("{} = {}", cle, valeur),
+            Err(e) => eprintln!("erreur : {}", e),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -44,21 +44,21 @@ mod tests {
     use super::*;
 
     #[test]
-    fn check_valeur_est_un_chiffre() {
-        let chaine: &str = "retries=beaucoup";
-        assert_eq!(Err("erreur : valeur invalide pour retries : beaucoup".to_string()), lire_reglage(chaine)); 
+    fn check_valeur_est_uniquement_un_chiffre() {
+        let chaine: &str = "retries=beaucoup45";
+        assert_eq!(Err("valeur invalide pour retries : beaucoup45".to_string()), lire_reglage(chaine)); 
     }
 
     #[test]
     fn check_contient_une_cle() {
         let chaine: &str = "=42";
-        assert_eq!(Err("erreur : cle vide".to_string()), lire_reglage(chaine)); 
+        assert_eq!(Err("cle vide".to_string()), lire_reglage(chaine)); 
     }
 
     #[test]
     fn check_contient_un_egal() {
         let chaine: &str = "max_conn";
-        assert_eq!(Err("erreur : ligne malformee : max_conn".to_string()), lire_reglage(chaine));
+        assert_eq!(Err("ligne mal formée : max_conn".to_string()), lire_reglage(chaine));
     }
 
 }
